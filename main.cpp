@@ -46,12 +46,19 @@ struct Less{
         return edge[x].uncover_time < edge[y].uncover_time;
     }
 };
+int Dscore[maxn_node];
+struct Less_dscore{
+    Less_dscore(){}
+    bool operator()(int x, int y){
+        return abs(Dscore[x]) > abs(Dscore[y]);
+    }
+};
 int nodeN, edgeN;
 int origin_head[maxn_node], head[maxn_node], cnt, origin_cnt, 
     min_coversize, max_steps, delta;
 int coverable_degree[maxn_node], origin_degree[maxn_node];
 multiset<int, Less> uncovered;  
-    //must ensure unqual timestamps for different edges, thus use multiset
+multiset<int, Less_dscore> dscore_node;
 long timestamp;
 bool vis[maxn], check[maxn], cover[maxn_node], 
     min_cover[maxn_node], tabu[maxn_node];
@@ -77,12 +84,12 @@ void Ewls(int max_steps);
 /**
  * main - init and run Ewls
  */
-int main(){;
+int main(){
     while(~scanf("%d%d", &nodeN, &edgeN)){        
         init();
         // TODO: modify delta and max_steps
-        delta = 2;
-        max_steps = nodeN * 3;
+        delta = 1;
+        max_steps = nodeN * 2;
         for(int i = 0; i < edgeN; ++i){
             int x, y;
             scanf("%d%d", &x, &y);
@@ -112,7 +119,9 @@ void init(){
     memset(coverable_degree, 0, sizeof(coverable_degree));
     memset(origin_degree, 0, sizeof(origin_degree));
     memset(tabu, 0, sizeof(tabu));
+    memset(Dscore, 0, sizeof(Dscore));
     uncovered.clear();
+    dscore_node.clear();
     max_steps = 0;
     cnt = 0; origin_cnt = 0;
     viscnt = 0; check_cnt = 0;
@@ -270,8 +279,6 @@ void add_to_cover(int node){
 
 /**
  * delete_from_cover - remove a node from cover set
- * 
- *      TODO: test it
  */
 void delete_from_cover(int node){
     if(!cover[node]) return;
@@ -306,9 +313,6 @@ void delete_from_cover(int node){
  * choose_exchange_pair - choose an edge with a node in cover 
  *      and the other not
  *      return: the index of the edge in edge[]
- * 
- *      TODO: check if the random policy is correct and 
- *      corresponds with the paper
  */
 int choose_exchange_pair(){
     memset(check, 0, sizeof(check));
@@ -370,14 +374,19 @@ void Ewls(int max_steps){
     min_coversize = cover_size;
     dbg_printf("min_coversize = %d\n", min_coversize);
     //remove some nodes to make coversize be upper_bound - delta
-    int sel_node;
-    for(int i = 0; i < delta; ++i){
-        sel_node = rand() % nodeN + 1;
-        while(!cover[sel_node]){
-            sel_node = rand() % nodeN + 1;
-        }
-        delete_from_cover(sel_node);
+    for(int i = 1; i <= nodeN; ++i){
+        Dscore[i] = dscore(i);
+        dscore_node.insert(i);
     }
+    multiset<int, Less_dscore>::iterator p = dscore_node.begin();
+    for(int i = 0; i < delta; ){
+        if(cover[*p]){
+            delete_from_cover(*p);
+            ++i;
+        }
+        ++p;
+    }
+
     for(int step = 0; step < max_steps; ++step){
         int idx = choose_exchange_pair();
         if(idx != -1){
@@ -393,7 +402,7 @@ void Ewls(int max_steps){
         else{
             // update edge weight
             multiset<int, Less>::iterator p;
-            for(p = uncovered.begin(); p != uncovered.end(); ++p)   // IMPORTANT!!!
+            for(p = uncovered.begin(); p != uncovered.end(); ++p) //IMPORTANT!
                 edge[*p].weight++;
             continue;
         }
@@ -429,12 +438,19 @@ void Ewls(int max_steps){
                 memcpy(coverable_degree, tmp_degree, sizeof(tmp_degree));
             }
             // remove some nodes from cover
+            // TODO: rank the nodes with dscore
+            dscore_node.clear();
+            for(int i = 1; i <= nodeN; ++i){
+                Dscore[i] = dscore(i);
+                dscore_node.insert(i);
+            }
+            p = dscore_node.begin();
             for(int i = 0; i < delta; ++i){
-                sel_node = rand() % nodeN + 1;
-                while(!cover[sel_node]){
-                    sel_node = rand() % nodeN + 1;
+                if(cover[*p]){
+                    delete_from_cover(*p);
+                    ++i;
                 }
-                delete_from_cover(sel_node);
+                ++p;
             }
         }
     }

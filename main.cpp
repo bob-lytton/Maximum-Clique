@@ -3,10 +3,10 @@
  * assigned in the course Data Structure and Algorithm Practice.
  * 
  * The members are:
- *      Chen Zhibin     17000.....
+ *      Chen Zhibin     1700012764
  *      Wang Yuanfei    17000.....
  *      Lei Yuntong     1700012893
- *      Cao Haowei      17000.....
+ *      Cao Haowei      1700013032
  *      Pan Shengyuan   17000.....
  * 
  * ###The style could be modified###
@@ -26,7 +26,7 @@
 #include<algorithm>
 using namespace std;
 
-// #define DEBUG
+#define DEBUG
 #ifdef DEBUG
     #define dbg_printf(...) printf(__VA_ARGS__)
 #else
@@ -35,7 +35,7 @@ using namespace std;
 
 // first, let's try minimum vertex cover
 //use adjacent list to save the graph
-const int maxn = 250050;
+const int maxn = 400000;
 const int maxn_node = 800;
 struct Edge{
     int to, weight, next, uncover_time;
@@ -77,30 +77,19 @@ void Ewls(int max_steps);
 /**
  * main - init and run Ewls
  */
-int main(int argc, char* argv[]){
-    if(argc > 1)
-        delta = atoi(argv[1]);
-    else delta = 0;
-    if(argc > 2)
-        max_steps = atoi(argv[2]);
-    else max_steps = 0;
-
-    while(~scanf("%d%d", &nodeN, &edgeN)){
+int main(){;
+    while(~scanf("%d%d", &nodeN, &edgeN)){        
         init();
         // TODO: modify delta and max_steps
-        if(delta == 0)
-            delta = 1;
-        if(max_steps == 0)
-            max_steps = nodeN << 2;  
-
+        delta = 2;
+        max_steps = nodeN * 3;
         for(int i = 0; i < edgeN; ++i){
             int x, y;
             scanf("%d%d", &x, &y);
             Add_edge(x, y, origin_edge, origin_head, 
                 origin_degree, &origin_cnt);
-            dbg_printf("test input = %d %d\n", x, y);
         }
-        find_complement();
+        find_complement();  // here edgeN is redefined
         srand(time(NULL));
         Ewls(max_steps);
         output();
@@ -176,22 +165,13 @@ void find_complement(){
         for(int j = i + 1; j <= nodeN; ++j){
             if(i != j && find_edge(i, j, origin_edge, origin_head) == NULL){
                 Add_edge(i, j, edge, head, coverable_degree, &cnt);
-
                 //add the edges into uncovered set
                 uncovered.insert(cnt - 1);
                 uncovered.insert(cnt - 2);
-
                 edgeN++;
             }
         }
     }
-    dbg_printf("edgeN = %d, cnt = %d\n", edgeN, cnt);
-    for(int i = 0; i < cnt; ++i){
-        dbg_printf("edge[%d] = (to=%d, weight=%d, next=%d, uncover=%d)\n",
-            i, edge[i].to, edge[i].weight, edge[i].next, edge[i].uncover_time);
-    }
-    for(int i = 1; i <= nodeN; ++i)
-        dbg_printf("coverable_degree[%d] = %d\n", i, coverable_degree[i]);
 }
 
 /**
@@ -254,17 +234,6 @@ void greedy(){
             }
         }
         add_to_cover(node);
-    #ifdef DEBUG
-        dbg_printf("viscnt = %d\n", viscnt);
-        for(int i = 1; i <= nodeN; ++i){
-            dbg_printf("coverable_degree[%d] = %d\n", 
-                    i, coverable_degree[i]);
-            if(coverable_degree[i] < 0){
-                dbg_printf("line %d: ERROR degree negative!\n", __LINE__);
-                exit(1);
-            }
-        }
-    #endif
     }
 }
 
@@ -276,6 +245,7 @@ void greedy(){
  */
 void add_to_cover(int node){
     if(cover[node]) return;
+    int weight = 0;
     dbg_printf("added a node %d\nadd edges: ", node);
     for(int i = head[node]; i != -1; i = edge[i].next){
         if(!vis[i] && !vis[i ^ 1] && !cover[edge[i].to]){
@@ -287,11 +257,13 @@ void add_to_cover(int node){
             coverable_degree[edge[i].to]--;
             uncovered.erase(i);
             uncovered.erase(i ^ 1);
+            weight += edge[i].weight;
         }
     }
     dbg_printf("\n");
     cover[node] = true;
     cover_size++;
+    dbg_printf("covered weight = %d\n", weight);
     dbg_printf("viscnt changed! viscnt = %d\n", viscnt);
     dbg_printf("cover_size changed!, cover_size = %d\n", cover_size);
 }
@@ -303,6 +275,7 @@ void add_to_cover(int node){
  */
 void delete_from_cover(int node){
     if(!cover[node]) return;
+    int weight = 0;
     dbg_printf("delete a node %d\nuncover edges: ", node);
     for(int i = head[node]; i != -1; i = edge[i].next){
         if(vis[i] && vis[i ^ 1] && !cover[edge[i].to]){
@@ -318,15 +291,13 @@ void delete_from_cover(int node){
             edge[i ^ 1].uncover_time = timestamp++;
             uncovered.insert(i);
             uncovered.insert(i ^ 1);
+            weight += edge[i].weight;
         }
-        else if(vis[i] && cover[edge[i].to]){
-            //do nothing
-        }
-        else if(!vis[i]);//impossible
     }
     dbg_printf("\n");
     cover[node] = false;
     cover_size--;
+    dbg_printf("uncovered weight = %d\n", weight);
     dbg_printf("viscnt changed! viscnt = %d\n", viscnt);
     dbg_printf("cover_size changed!, cover_size = %d\n", cover_size);
 }
@@ -343,18 +314,11 @@ int choose_exchange_pair(){
     memset(check, 0, sizeof(check));
     int res[maxn_node << 1] = {0};
     int edge_cnt = 0;
-    // TODO: need test to check if uncovered is ordered as needed
     multiset<int, Less>::iterator p = uncovered.begin();
     int sel = *p;   
     // compute available node pair set
     if(sel == -1) return -1;
     int v[2] = {edge[sel].to, edge[sel ^ 1].to};
-#ifdef DEBUG
-    if(cover[v[0]] || cover[v[1]]){
-        dbg_printf("line %d: ERROR edge is already covered\n", __LINE__ - 1);
-        exit(1);
-    }
-#endif
     for(int k = 0; k < 2; ++k)
         for(int i = head[v[k]]; i != -1; i = edge[i].next){
             if(!tabu[edge[i].to] && 
@@ -375,12 +339,6 @@ int choose_exchange_pair(){
             check[sel] = true;
             check[sel ^ 1] = true;
             v[0] = edge[sel].to; v[1] = edge[sel ^ 1].to;
-        #ifdef DEBUG
-            if(cover[v[0]] || cover[v[1]]){
-                dbg_printf("line %d: ERROR edge is already covered\n", __LINE__ - 1);
-                exit(1);
-            }
-        #endif
             for(int k = 0; k < 2; ++k)
                 for(int i = head[v[k]]; i != -1; i = edge[i].next){
                     check[i] = true;    //already checked the edge
@@ -412,8 +370,9 @@ void Ewls(int max_steps){
     min_coversize = cover_size;
     dbg_printf("min_coversize = %d\n", min_coversize);
     //remove some nodes to make coversize be upper_bound - delta
-    int sel_node = rand() % nodeN + 1;
+    int sel_node;
     for(int i = 0; i < delta; ++i){
+        sel_node = rand() % nodeN + 1;
         while(!cover[sel_node]){
             sel_node = rand() % nodeN + 1;
         }
@@ -421,21 +380,9 @@ void Ewls(int max_steps){
     }
     for(int step = 0; step < max_steps; ++step){
         int idx = choose_exchange_pair();
-        if(idx != -1){       //TODO: check if edge[idx].to is always in cover[]
+        if(idx != -1){
             dbg_printf("idx = %d\n", idx);
             int u = edge[idx].to, v = edge[idx ^ 1].to;
-        #ifdef DEBUG
-            if(!cover[u]){
-                dbg_printf("line %d: ", __LINE__ - 1);
-                dbg_printf("ERROR choose_exchange_pair return wrong edge\n");
-                exit(1);
-            }
-            if(cover[v]){
-                dbg_printf("line %d: ", __LINE__ - 1);
-                dbg_printf("ERROR choose_exchange_pair return wrong edge\n");
-                exit(1);
-            }
-        #endif
             dbg_printf("*************\n");
             delete_from_cover(u);
             add_to_cover(v);
@@ -444,23 +391,11 @@ void Ewls(int max_steps){
             tabu[v] = false;
         }
         else{
-            dbg_printf("randomly delete a node from cover.\n");
             // update edge weight
-            for(int i = 0; i < edgeN; ++i)
-                edge[i].weight++;
-            // randomly select a node from cover and exchange it
-            sel_node = rand() % cover_size;
-            while(!cover[sel_node]){
-                sel_node = rand() % cover_size;
-            }
-            dbg_printf("****sel_node = %d****\n", sel_node);
-            delete_from_cover(sel_node);
-
-            multiset<int, Less>::iterator p = uncovered.begin();
-            int iter = rand() % uncovered.size();
-            while(iter--) ++p;
-            dbg_printf("randomly added node of edge %d\n", *p);
-            add_to_cover(edge[*p].to);
+            multiset<int, Less>::iterator p;
+            for(p = uncovered.begin(); p != uncovered.end(); ++p)   // IMPORTANT!!!
+                edge[*p].weight++;
+            continue;
         }
         if(cover_size + (edgeN - viscnt) < upper_bound){
             upper_bound = cover_size + (edgeN - viscnt);
@@ -471,10 +406,10 @@ void Ewls(int max_steps){
                 dbg_printf("min_coversize = %d\n", min_coversize);
             }
             else{
+                dbg_printf("use greedy to cover the remained edges\n");
                 // copy the origin status before greedy
                 bool tmp_cover[maxn_node] = {0}, tmp_vis[maxn] = {0};
                 int tmp_cover_size = cover_size, tmp_viscnt = viscnt;
-                // TODO: this '=' is doubtful, check it
                 multiset<int, Less> tmp_uncover = uncovered;    
                 int tmp_degree[maxn_node] = {0};
                 memcpy(tmp_cover, cover, sizeof(cover));
@@ -489,13 +424,13 @@ void Ewls(int max_steps){
                 // recover the origin status before greedy
                 cover_size = tmp_cover_size; viscnt = tmp_viscnt;
                 uncovered = tmp_uncover;
-                memcpy(tmp_cover, cover, sizeof(cover));
-                memcpy(tmp_vis, vis, sizeof(vis));
-                memcpy(tmp_degree, coverable_degree, sizeof(coverable_degree));
+                memcpy(cover, tmp_cover, sizeof(tmp_cover));
+                memcpy(vis, tmp_vis, sizeof(tmp_vis));
+                memcpy(coverable_degree, tmp_degree, sizeof(tmp_degree));
             }
             // remove some nodes from cover
-            sel_node = rand() % nodeN + 1;
             for(int i = 0; i < delta; ++i){
+                sel_node = rand() % nodeN + 1;
                 while(!cover[sel_node]){
                     sel_node = rand() % nodeN + 1;
                 }

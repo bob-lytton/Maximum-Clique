@@ -26,7 +26,7 @@
 #include<algorithm>
 using namespace std;
 
-#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
     #define dbg_printf(...) printf(__VA_ARGS__)
 #else
@@ -361,7 +361,7 @@ int choose_exchange_pair(){
     for(int k = 0; k < 2; ++k)
         for(int i = head[v[k]]; i != -1; i = edge[i].next){
             if(!tabu[edge[i].to] && 
-                cover[edge[i].to] && score(edge[i].to, v[k]))
+                cover[edge[i].to] && score(edge[i].to, v[k]) > 0)
             {
                 res[edge_cnt++] = i;
             }
@@ -388,7 +388,7 @@ int choose_exchange_pair(){
                 for(int i = head[v[k]]; i != -1; i = edge[i].next){
                     check[i] = true;    //already checked the edge
                     if(!tabu[edge[i].to] && 
-                        cover[edge[i].to] && score(edge[i].to, v[k]))
+                        cover[edge[i].to] && score(edge[i].to, v[k]) > 0)
                     {
                         res[edge_cnt++] = i;
                     }

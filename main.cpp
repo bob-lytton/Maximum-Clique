@@ -453,20 +453,12 @@ void Ewls(int max_steps){
                 edge[i].weight++;
             // randomly select a node from cover and exchange it
             sel_node = rand() % cover_size;
-            while(cover[sel_node]){
-                dbg_printf("****sel_node = %d****\n", sel_node);
-                int flag = 0;
-                for(int i = head[sel_node]; i != -1; i = edge[i].next){
-                    if(!cover[edge[i].to]){
-                        flag = 1;
-                        delete_from_cover(sel_node);
-                        add_to_cover(edge[i].to);
-                        break;
-                    }
-                }
-                if(flag) break;
+            while(!cover[sel_node]){
                 sel_node = rand() % cover_size;
             }
+            dbg_printf("****sel_node = %d****\n", sel_node);
+            delete_from_cover(sel_node);
+
             multiset<int, Less>::iterator p = uncovered.begin();
             int iter = rand() % uncovered.size();
             while(iter--) ++p;

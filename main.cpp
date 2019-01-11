@@ -48,14 +48,14 @@ struct Less{
 };
 int nodeN, edgeN;
 int origin_head[maxn_node], head[maxn_node], cnt, origin_cnt, 
-    cover_size, min_coversize, max_steps, delta;
+    min_coversize, max_steps, delta;
 int coverable_degree[maxn_node], origin_degree[maxn_node];
 multiset<int, Less> uncovered;  
     //must ensure unqual timestamps for different edges, thus use multiset
 long timestamp;
 bool vis[maxn], check[maxn], cover[maxn_node], 
     min_cover[maxn_node], tabu[maxn_node];
-int viscnt, check_cnt;
+int cover_size, viscnt, check_cnt;
 
 /* Basic operations */
 void init();
@@ -89,9 +89,9 @@ int main(int argc, char* argv[]){
         init();
         // TODO: modify delta and max_steps
         if(delta == 0)
-            delta = 2;
+            delta = 1;
         if(max_steps == 0)
-            max_steps = nodeN << 1;  
+            max_steps = nodeN << 2;  
 
         for(int i = 0; i < edgeN; ++i){
             int x, y;
@@ -103,9 +103,6 @@ int main(int argc, char* argv[]){
         find_complement();
         srand(time(NULL));
         Ewls(max_steps);
-        // greedy();
-        // memcpy(min_cover, cover, sizeof(cover));
-        // min_coversize = cover_size;
         output();
     }
     return 0;
@@ -474,10 +471,27 @@ void Ewls(int max_steps){
                 dbg_printf("min_coversize = %d\n", min_coversize);
             }
             else{
+                // copy the origin status before greedy
+                bool tmp_cover[maxn_node] = {0}, tmp_vis[maxn] = {0};
+                int tmp_cover_size = cover_size, tmp_viscnt = viscnt;
+                // TODO: this '=' is doubtful, check it
+                multiset<int, Less> tmp_uncover = uncovered;    
+                int tmp_degree[maxn_node] = {0};
+                memcpy(tmp_cover, cover, sizeof(cover));
+                memcpy(tmp_vis, vis, sizeof(vis));
+                memcpy(tmp_degree, coverable_degree, sizeof(coverable_degree));
+
                 greedy();   // TODO: check it, this is still doubtful
                 memcpy(min_cover, cover, sizeof(cover));
                 min_coversize = cover_size;
                 dbg_printf("min_coversize = %d\n", min_coversize);
+
+                // recover the origin status before greedy
+                cover_size = tmp_cover_size; viscnt = tmp_viscnt;
+                uncovered = tmp_uncover;
+                memcpy(tmp_cover, cover, sizeof(cover));
+                memcpy(tmp_vis, vis, sizeof(vis));
+                memcpy(tmp_degree, coverable_degree, sizeof(coverable_degree));
             }
             // remove some nodes from cover
             sel_node = rand() % nodeN + 1;
